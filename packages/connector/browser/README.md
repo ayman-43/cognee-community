@@ -100,7 +100,7 @@ is stored or hashed:
 * **Nothing leaves your machine** except, as with any cognee data, the documents sent to
   your LLM provider during cognify. `cognee.forget(dataset="browsing")` removes it all.
 
-On a real profile with a few hundred pages, the defaults skipped about a quarter of them:
+On a real profile with a few hundred pages, the defaults skipped about a fifth of them:
 local dev servers, sign-in pages, webmail. None of those belong in memory.
 
 ## How sync and forget work
