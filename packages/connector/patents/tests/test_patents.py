@@ -213,7 +213,9 @@ class FakeOPS:
         hits = [p for p in self.corpus if self.queries[query](p) and start <= p.published <= end]
         if not hits:
             return httpx.Response(404, text="<fault>SERVER.EntityNotFound</fault>")
-        first, last = (int(x) for x in request.url.params["Range"].split("-"))
+        # OPS reads the search range from the X-OPS-Range header only.
+        assert "Range" not in request.url.params
+        first, last = (int(x) for x in request.headers["X-OPS-Range"].split("-"))
         page = hits[first - 1 : last]
         body = {
             "ops:world-patent-data": {
@@ -339,7 +341,7 @@ def test_search_pages_through_results():
     found = list(_search(_client(fake), 'pa="acme"', date(2026, 1, 1), TODAY))
 
     assert len(found) == 250
-    ranges = [r.url.params["Range"] for r in fake.requests if "search" in r.url.path]
+    ranges = [r.headers["X-OPS-Range"] for r in fake.requests if "search" in r.url.path]
     assert ranges == ["1-100", "101-200", "201-250"]
 
 

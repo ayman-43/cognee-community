@@ -170,6 +170,7 @@ class _OPSClient:
         *,
         params: dict | None = None,
         content: str | None = None,
+        extra_headers: dict | None = None,
         allow_not_found: bool = False,
     ) -> dict | None:
         """Call an OPS REST endpoint and return its JSON body.
@@ -187,6 +188,7 @@ class _OPSClient:
             headers = {"Authorization": f"Bearer {self._token}", "Accept": "application/json"}
             if content is not None:
                 headers["Content-Type"] = "text/plain"
+            headers.update(extra_headers or {})
             try:
                 response = self._http.request(
                     method,
@@ -549,8 +551,14 @@ def _search(client: _OPSClient, query: str, start: date, end: date) -> Iterator[
     """Yield every publication matching ``query`` published in [start, end]."""
     cql = f'({query}) and pd within "{start:%Y%m%d} {end:%Y%m%d}"'
     path = "published-data/search/biblio"
+    # Search takes its range in the X-OPS-Range header (as python-epo-ops-client
+    # sends it); a Range query parameter is only read by the images service.
     first = client.request(
-        "GET", path, params={"q": cql, "Range": f"1-{_PAGE_SIZE}"}, allow_not_found=True
+        "GET",
+        path,
+        params={"q": cql},
+        extra_headers={"X-OPS-Range": f"1-{_PAGE_SIZE}"},
+        allow_not_found=True,
     )
     if first is None:  # OPS answers a search without hits with 404
         return
@@ -571,7 +579,9 @@ def _search(client: _OPSClient, query: str, start: date, end: date) -> Iterator[
     begin = _PAGE_SIZE + 1
     while begin <= total:
         stop = min(begin + _PAGE_SIZE - 1, total)
-        page = client.request("GET", path, params={"q": cql, "Range": f"{begin}-{stop}"})
+        page = client.request(
+            "GET", path, params={"q": cql}, extra_headers={"X-OPS-Range": f"{begin}-{stop}"}
+        )
         yield from _exchange_documents(page)
         begin = stop + 1
 
